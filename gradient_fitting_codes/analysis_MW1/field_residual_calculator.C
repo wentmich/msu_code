@@ -40,7 +40,10 @@
     Nm      = number of multipole components
     NC      = number of coefficients
     index   = index used in read_M5_params_NORM()  
-    NP      = number of total parameters in Enge model function  */
+    NP      = number of total parameters in Enge model function
+    OrdCOSY = number of poles analyzed by COSY 
+    r_probes= radius of the modeled probes
+    ------- = integers used as indices in loops   */
     
 const char sep[2]=" ,";
 double PI=3.141592654;
@@ -324,6 +327,8 @@ value as "chi_squared." */
 
 double get_average_percent_error(FldData * exp_data, FldData * model_data)
 {
+/* finds the average percent error. Percent error calculated as (exp - mod)/mod.
+It sums these values and divides by the number of data points. */
 	double percent_error = 0.;
 	double exp_b = 0.;
 	double model_b = 0.;
@@ -354,6 +359,8 @@ double get_average_percent_error(FldData * exp_data, FldData * model_data)
 
 double get_average_difference(FldData * exp_data, FldData * model_data)
 {
+/* calculates the average difference between modeled and analyzed field
+values. */ 
 	double difference = 0.;
 	double exp_b = 0.;
 	double model_b = 0.;
@@ -371,6 +378,9 @@ double get_average_difference(FldData * exp_data, FldData * model_data)
 
 TGraph2D * graph_fld_data(FldData * data)
 {
+/* makes a scatter plot of all data points in "data." The magnetic field "Br" is
+plotted as a function of "z" and "t" (z and theta). The function returns a
+TGraph2D object pointer. */
 	double * x = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
 	double * y = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
 	double * z = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
@@ -386,6 +396,7 @@ TGraph2D * graph_fld_data(FldData * data)
 
 int field_residual_calculator()
 {
+/* main function to analyze the error in the data through various methods. */
 	double * fcoef_model, * fcoef_fit;
 	double * Bn_model, * Bn_fit;
 	FldData * data0_model, * data0_fit;
@@ -406,7 +417,7 @@ int field_residual_calculator()
 	chi_squared = get_chi_squared(data0_model, data0_fit);
 	double avg_percent_error = get_average_percent_error(data0_model, data0_fit);
 	double avg_difference    = get_average_difference(data0_model, data0_fit);
-	printf("#\chi^2 = %lg\r\n", chi_squared);
+	printf("#chi^2 = %lg\r\n", chi_squared);
 	printf("#<Percent Error> = %lg\r\n", avg_percent_error);
 	printf("#<Difference> = %lg\r\n", avg_difference);
 	return 0;
