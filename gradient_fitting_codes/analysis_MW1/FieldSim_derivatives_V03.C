@@ -11,7 +11,6 @@
 # include <math.h>
 # include <string.h>
 # include <time.h>
-//# include "plot_and_fit_gradient.h"
 
 typedef struct {
   int status;
@@ -337,7 +336,7 @@ void zFourierTransfAnalysis(double *B_r_n, double *A_r_n)
   }//11111111111111111111111111111111111111111 end
   
   //Assuming Nz>=3
-  double W=10; //Factor on width for optimal accuracy
+  double W=15; //Factor on width for optimal accuracy
   m_max = 20;
   kmax = 40*(W/z_max);
   kmin = -kmax;
@@ -408,11 +407,7 @@ void zFourierTransfAnalysis(double *B_r_n, double *A_r_n)
 
 void write_b_n0_a_n0_Re_and_Im( )
 {
-/* Michael understands this function. It creates eleven new files for the normal
-and skew components of the on-axis gradient. These are created one for each
-current I think. At zero current, the gradient should be zero everywhere. YES!
-That was right, good job. */
-  printf(",\n");
+  //printf(",\n");
 //wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww Re, Im
 // Write Re and Im components to file
   FILE *outptr;
