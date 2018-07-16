@@ -74,6 +74,9 @@ char * fname_model = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
 char * fname_fit   = (char*) "M5_sim_fit.txt";
 char * fname_init  = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
 
+double * fcoef = (double*) malloc( NC*NEE*NNC * sizeof(double) );
+double * Bn    = (double*) malloc( Nn * sizeof(double) );
+
 /* DECLARATION OF DATA STRUCTURES:
 	FldData = structure used to store arrays of field data   */
 
@@ -91,7 +94,7 @@ double target_function(double * parameters)
 {
 	gROOT -> ProcessLine(".L field_residual_calculator.C");
 	double * Bn_tmp = (double*) malloc(sizeof(double)*NPOLES);
-	double * fcoef_tmp = (double*) malloc(sizeof(double)*NPOLES*NC);
+	double * fcoef_tmp = (double*) malloc( NC*NEE*NNC * sizeof(double) );
 	for (int i = 0; i < NPOLES; ++i)
 	{
 		Bn_tmp[i] = parameters[i*NP];
@@ -100,6 +103,7 @@ double target_function(double * parameters)
 	}
 	write_M5_params_NORM(Bn_tmp, fcoef_tmp);
 	double chi_squared = field_residual_calculator();
+	printf("chi^2 = %lg", chi_squared);
 	return chi_squared;
 }
 
@@ -111,13 +115,59 @@ string to_string(int number)
 	return str;
 }
 
-int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migrad")
+void read_M5_params_NORM( char *fname)
 {
-	gROOT -> ProcessLine(".L field_residual_calculator.C");
-	
-	double * fcoef = (double*) malloc( NC*NEE*NNC * sizeof(double) );
-	double * Bn    = (double*) malloc( Nn * sizeof(double) );
-	
+/* reads in the Enge coefficients and field parameters from the file denoted by
+"fname." It then returns two arrays, one for the field parameters (Bn_) and one
+for the Enge coefficients (fcoef). */
+	FILE *fp; char line[512]; char *pch;
+	const char sep[2]=" ,";
+	fp = fopen(fname, "r");
+	sprintf(line,"#");
+	while(strncmp(line,"#",1)==0)
+		fgets(line,512,fp);
+	sscanf(line," %lf\n", &R0);
+	fgets(line,512,fp);
+	sscanf(line," %lf\n", &LEFF);
+	sprintf(line,"#"); while(strncmp(line,"#",1)==0) fgets(line,512,fp);
+	int i=2;
+	pch = strtok(line, sep); sscanf(pch,"%lf", &Bn[i]);
+	for( i=3; i<7 ; i++ )
+	{
+		pch = strtok(NULL, sep);
+		sscanf(pch,"%lf", &Bn[i]);
+	} 
+	sprintf(line,"#");
+	while(strncmp(line,"#",1)==0)
+		fgets(line,512,fp);
+	while( !feof(fp) )
+	{
+		pch = strtok(line, sep);
+		sscanf(pch,"%i", &n);
+		pch = strtok(NULL, sep);
+		sscanf(pch,"%i", &ee);
+		for(int c=0; c<NC; c++)
+		{
+			index = c + NC*( NEE*n + ee );
+			pch = strtok(NULL, sep);
+			sscanf(pch,"%lf", &fcoef[index]);
+		}
+		fgets(line,512,fp);
+	}
+	pch = strtok(line, sep);
+	sscanf(pch,"%i", &n);
+    pch = strtok(NULL, sep);
+    sscanf(pch,"%i", &ee);
+    for( c=0; c<NC; c++)
+    { 
+    	index = c + NC*( NEE*n + ee );
+    	pch = strtok(NULL, sep); sscanf(pch,"%lf", &fcoef[index]);
+    }
+	return;
+}
+
+int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migrad")
+{	
 	ROOT::Math::Minimizer * min = 
 	ROOT::Math::Factory::CreateMinimizer(min_name, fnc_name);
 	
@@ -137,13 +187,14 @@ int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migr
 	double * maximum   = (double*) malloc(sizeof(double)*nParams);
 	
 	read_M5_params_NORM(fname_init);
-	
+
 	for (int i = 0; i < NPOLES; ++i)
 	{
 		variables[i*NP] = Bn[i];
-		cout << "!!!!!!!!!!!!!!!!!!!!" << endl;
-		for (int j = 0; j < NC; ++j)
-			variables[i*NP + j + 1] = fcoef[j*i];
+		for (int j = 0; j < NC/2; ++j)
+			variables[i*NP + j + 1] = fcoef[NC*NEE*i + j];
+		for (int j = 0; j < NC/2; ++j)
+			variables[i*NP + j + 1 + NC/2] = fcoef[NC*NEE*i + j + NC];
 	}
 
 	for (int i = 0; i < NP*NPOLES; ++i)
