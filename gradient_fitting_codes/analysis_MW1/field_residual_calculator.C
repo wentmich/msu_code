@@ -192,17 +192,43 @@ for the Enge coefficients (fcoef). */
 		}
 		fgets(line,512,fp);
 	}
-	/*pch = strtok(line, sep);
-	sscanf(pch,"%i", &n);
-	pch = strtok(NULL, sep);
-	sscanf(pch,"%i", &ee);
-	for( c=0; c<NC; c++)
-	{
-		index = c + NC*( NEE*n + ee );
-		pch = strtok(NULL, sep);
-		sscanf(pch,"%lf", &fcoef[index]);
-	}*/
 	return;
+}
+
+void write_M5_params_NORM(double * bfield, double * parameters)
+{
+/* writes the final fitted coefficients and bfield values to a file named
+"M5_sim_fit.txt." The parameters are written to copy the format of the file from
+which the initial parameters are read. */
+    ofstream file;
+    file.open("M5_sim_fit.txt");
+    file << "#Field excitation parameters for each multipole n \r\n";
+    file << "# row1: reference radius r0 [m] \r\n";
+    file << "# row2: LEFF[m] \r\n";
+    file << "# row3: Field excitation on multipole \r\n";
+    file << "   " << R0 << "\r\n";
+    file << "   " << LEFF;
+    file << "\r\n#Fields at r0 for each multipole component \r\n";
+    file << "#n=  2        3     4     5     6     7     8     9     10\r\n";
+    for (int i = 2; i < Nn; ++i)
+        file << "     " << bfield[i];
+    file << "\r\n";
+    file << "# Enge coefs \r\n";
+    file << "# n  ee  c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11\r\n";
+    for (int i = 0; i < Nn; ++i)
+    {
+        file << "  " << i << "  0  ";
+        for (int k = 0; k < NC; ++k)
+            file << parameters[NEE*i*NC + k] << " ";
+        file << "\r\n";
+        
+        file << "  " << i << "  1  ";
+        for (int k = NC; k < NC*2; ++k)
+            file << parameters[NEE*i*NC + k] << " ";
+        file << "\r\n";
+    }       
+    file.close();
+    return;
 }
 
 FldData * Field_Simulation_via_COSY_M5_FldData(double * fcoef, double * Bn)
@@ -376,25 +402,44 @@ values. */
 	return avg_difference;
 }
 
-TGraph2D * graph_fld_data(FldData * data)
+void graph_fld_data(FldData * data)
 {
 /* makes a scatter plot of all data points in "data." The magnetic field "Br" is
 plotted as a function of "z" and "t" (z and theta). The function returns a
 TGraph2D object pointer. */
-	double * x = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
-	double * y = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
-	double * z = (double*) malloc(sizeof(double)*Nt*Nz*0.5);
-	for (int i = 0; i < (Nt*Nz*0.5); ++i)
+	TCanvas * c1 = new TCanvas();
+	double * x = (double*) malloc(sizeof(double)*Nt*Nz);
+	double * y = (double*) malloc(sizeof(double)*Nt*Nz);
+	double * z = (double*) malloc(sizeof(double)*Nt*Nz);
+	for (int i = 0; i < (Nt*Nz); ++i)
 	{
-		x[i] = data[i*2].z;
-		y[i] = data[i*2].t;
-		z[i] = data[i*2].Br;
+		x[i] = data[i].z;
+		y[i] = data[i].t;
+		z[i] = data[i].Br;
 	}
-	TGraph2D * graph = new TGraph2D((Nt*Nz*0.5), x, y, z);
-	return graph;
+	TGraph2D * graph = new TGraph2D((Nt*Nz), x, y, z);
+	graph -> Draw("PCOL");
+	return;
 }
 
-int field_residual_calculator()
+void graph_residual(FldData * model, FldData * fit)
+{
+	TCanvas * c1 = new TCanvas("c1", "Field Residual from Fit", 800, 600);
+	double * x = (double*) malloc(sizeof(double)*Nt*Nz);
+	double * y = (double*) malloc(sizeof(double)*Nt*Nz);
+	double * z = (double*) malloc(sizeof(double)*Nt*Nz);
+	for (int i = 0; i < (Nt*Nz); ++i)
+	{
+		x[i] = model[i].z;
+		y[i] = model[i].t;
+		z[i] = model[i].Br - fit[i].Br;
+	}
+	TGraph2D * graph = new TGraph2D((Nt*Nz), x, y, z);
+	graph -> Draw("PCOL");
+	return;
+}
+
+double field_residual_calculator()
 {
 /* main function to analyze the error in the data through various methods. */
 	double * fcoef_model, * fcoef_fit;
@@ -409,16 +454,21 @@ int field_residual_calculator()
 	Bn_model    = Bn;
 	data0_model = Field_Simulation_via_COSY_M5_FldData(fcoef_model, Bn_model);
 
+	//graph_fld_data(data0_model);
+	
 	read_M5_params_NORM(fname_fit);
 	fcoef_fit = fcoef;
 	Bn_fit    = Bn;
 	data0_fit = Field_Simulation_via_COSY_M5_FldData(fcoef_fit, Bn_fit);
 	
+	//graph_fld_data(data0_fit);
+	graph_residual(data0_model, data0_fit);
+	
 	chi_squared = get_chi_squared(data0_model, data0_fit);
-	double avg_percent_error = get_average_percent_error(data0_model, data0_fit);
-	double avg_difference    = get_average_difference(data0_model, data0_fit);
-	printf("#chi^2 = %lg\r\n", chi_squared);
-	printf("#<Percent Error> = %lg\r\n", avg_percent_error);
-	printf("#<Difference> = %lg\r\n", avg_difference);
-	return 0;
+	//double avg_percent_error = get_average_percent_error(data0_model, data0_fit);
+	//double avg_difference    = get_average_difference(data0_model, data0_fit);
+	//printf("#chi^2 = %lg\r\n", chi_squared);
+	//printf("#<Percent Error> = %lg\r\n", avg_percent_error);
+	//printf("#<Difference> = %lg\r\n", avg_difference);
+	return chi_squared;
 }

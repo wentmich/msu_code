@@ -1,0 +1,162 @@
+      1 BEGIN ;
+ --- BIN FILE READ: lnCOSY91
+  12023   INCLUDE 'lnCOSY91';
+  12024   PROCEDURE RUN ;
+  12025     PROCEDURE M5_POTFLD_OUT  X Y S   B_X B_Y B_Z ;
+  12026       VARIABLE XARR 2 30 ;
+  12027       VARIABLE ZENGE 1 ;
+  12028       XARR(1) := X ;
+  12029       XARR(3) := Y ;
+  12030       LCCT := 1 ;
+  12031       IF LFR=4 ;
+  12032         NSDP := 19 ;
+  12033         ZENGE := -1*(S-PPOL(21)/2) ;
+  12034         ELSEIF 1=1 ;
+  12035         IF S<0 ;
+  12036           NSDP := 1 ;
+  12037           ZENGE := (S+PPOL(21)/2) ;
+  12038           ELSEIF 1=1 ;
+  12039           NSDP := 2 ;
+  12040           ZENGE := (S-PPOL(21)/2) ;
+  12041           ENDIF ;
+  12042         ENDIF ;
+  12043       LCCT := 1 ;
+  12044       POTFLD XARR ZENGE ; %POTFLD: 5355
+  12045       B_X := CONS(BFX) ;
+  12046       B_Y := CONS(BFY) ;
+  12047       B_Z := CONS(BFZ) ;
+  12048       ENDPROCEDURE ;
+  12049     PROCEDURE GENERATE_M5_FIELD_EXT ;
+  12050       VARIABLE ORD 1 ;
+  12051       VARIABLE LEFF 1 ;
+  12052       VARIABLE RADIUS 1 ;
+  12053       VARIABLE IMP 1 ;
+  12054       VARIABLE IEE 1 ;
+  12055       VARIABLE IEM 1 ;
+  12056       VARIABLE C 1 12 ;
+  12057       VARIABLE TMP 1 ;
+  12058       VARIABLE STR0 512 ;
+  12059       VARIABLE XYZ 1 3 ;
+  12060       VARIABLE NPNTS 1 ;
+  12061       VARIABLE F1 1 ;
+  12062       VARIABLE F2 1 ;
+  12063       VARIABLE F3 1 ;
+  12064       VARIABLE F4 1 ;
+  12065       VARIABLE F5 1 ;
+  12066       VARIABLE F6 1 ;
+  12067       VARIABLE I 1 ;
+  12068       VARIABLE J 1 ;
+  12069       VARIABLE K 1 ;
+  12070       VARIABLE X 1 ;
+  12071       VARIABLE Y 1 ;
+  12072       VARIABLE Z 1 ;
+  12073       VARIABLE TH 1 ;
+  12074       VARIABLE RD 1 ;
+  12075       VARIABLE BX 1 ;
+  12076       VARIABLE BY 1 ;
+  12077       VARIABLE BZ 1 ;
+  12078       VARIABLE BR 1 ;
+  12079       VARIABLE BT 1 ;
+  12080       VARIABLE C_ 1 ;
+  12081       VARIABLE S_ 1 ;
+  12082       VARIABLE FN 1 ;
+  12083       VARIABLE LINE 256 ;
+  12084       VARIABLE ZMIN 1 ;
+  12085       VARIABLE ZMAX 1 ;
+  12086       VARIABLE DZ 1 ;
+  12087       VARIABLE N_Z 1 ;
+  12088       VARIABLE XMIN 1 ;
+  12089       VARIABLE XMAX 1 ;
+  12090       VARIABLE DX 1 ;
+  12091       VARIABLE N_X 1 ;
+  12092       VARIABLE THMIN 1 ;
+  12093       VARIABLE THMAX 1 ;
+  12094       VARIABLE DTH 1 ;
+  12095       VARIABLE N_TH 1 ;
+  12096       VARIABLE RDMIN 1 ;
+  12097       VARIABLE RDMAX 1 ;
+  12098       VARIABLE DRD 1 ;
+  12099       VARIABLE N_RD 1 ;
+  12100       VARIABLE N_TOT 1 ;
+  12101       VARIABLE DIR_OUT 400 ;
+  12102       VARIABLE F_OUT 100 10 ;
+  12103       VARIABLE L_CU 1 ;
+  12104       VARIABLE B_CU 1 ;
+  12105       WRITE 6 '--- GENERATE_M5_FIELD_EXT ...' ;
+  12106       OPENF 51 'TMP_Enge_params_for_COSY.txt' 'UNKNOWN' ;
+  12107       READ 51 ORD ;
+  12108       READ 51 LEFF ;
+  12109       READ 51 RADIUS ;
+  12110       WRITE 6 ' ORD LEFF RADIUS ' ORD LEFF RADIUS ;
+  12111       IEM := 1 ;
+  12112       LOOP IMP 1 10 ;
+  12113         LOOP IEE 1 2 ;
+  12114           READ 51 IMP ;
+  12115           READ 51 IEE ;
+  12116           IEE := IEE+1 ;
+  12117           LOOP I 1 12 ;
+  12118             READ 51 TMP ;
+  12119             C(I) := TMP ;
+  12120             ENDLOOP ;
+  12121           FC IMP IEE IEM  C(1) C(2) C(3) C(4) C(5) C(6) ; %FC:  736
+  12122           ENDLOOP ;
+  12123         ENDLOOP ;
+  12124       READ 51 STR0 ;
+  12125       READ 51 TMP ;
+  12126       READ 51 F1 ;
+  12127       READ 51 F2 ;
+  12128       READ 51 F3 ;
+  12129       READ 51 F4 ;
+  12130       READ 51 F5 ;
+  12131       READ 51 F6 ;
+  12132       READ 51 TMP ;
+  12133       READ 51 TMP ;
+  12134       READ 51 TMP ;
+  12135       READ 51 TMP ;
+  12136       READ 51 STR0 ;
+  12137       WRITE 6 STR0 ;
+  12138       READ 51 TMP ;
+  12139       READ 51 TMP ;
+  12140       READ 51 TMP ;
+  12141       READ 51 TMP ;
+  12142       READ 51 TMP ;
+  12143       READ 51 TMP ;
+  12144       READ 51 TMP ;
+  12145       READ 51 TMP ;
+  12146       READ 51 TMP ;
+  12147       READ 51 TMP ;
+  12148       READ 51 TMP ;
+  12149       OV ORD 3 0 ; %OV: 1000
+  12150       RPR 1 1 1 ; %RPR: 6041
+  12151       FR 4 ; %FR: 5094
+  12152       UM ; %UM: 1538
+  12153       M5 LEFF F2 F3 F4 F5 F6 RADIUS ; %M5: 6927
+  12154       READ 51 STR0 ;
+  12155       READ 51 STR0 ;
+  12156       OPENF 52 STR0 'UNKNOWN' ;
+  12157       STR0 := 'START' ;
+  12158       NPNTS := 0 ;
+  12159       WHILE NOT( SS(STR0,1,3)='END' ); %SS:  235
+  12160         READ 51 STR0 ;
+  12161         IF NOT( SS(STR0,1,3)='END' ); %SS:  235
+  12162           NPNTS := NPNTS + 1 ;
+  12163           EXTRACT_DELIM_VALUES STR0 ',' 3 XYZ ; %EXTRACT_DELIM_VALUES:
+                  10465
+  12164           X := XYZ(1) ;
+  12165           Y := XYZ(2) ;
+  12166           Z := XYZ(3) ;
+  12167           M5_POTFLD_OUT  X Y Z   BX BY BZ ; %M5_POTFLD_OUT:12025
+  12168           WRITE 52 ' '&S(X)&' '&S(Y)&' '&S(Z)&' '&S(BX)&' '&S(BY)&' '&
+                  S(BZ) ; %S:  241 %S:  241 %S:  241 %S:  241 %S:  241 %S:  24
+                  1
+  12169           ENDIF ;
+  12170         ENDWHILE ;
+  12171       CLOSEF 52 ;
+  12172       CLOSEF 51 ;
+  12173       WRITE 6 '--- GENERATE_M5_FIELD_EXT ... END' ;
+  12174       ENDPROCEDURE ;
+  12175     DEF ; %DEF:  967
+  12176     GENERATE_M5_FIELD_EXT ; %GENERATE_M5_FIELD_EXT:12049
+  12177     WRITE 6 ' ...END ' ;
+  12178     ENDPROCEDURE ;
+  12179   RUN ; %RUN:12024
