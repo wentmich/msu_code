@@ -153,7 +153,7 @@ FldData * File_Read_zScan_FldData( char *fname)
 	return data;
 }
 
-void read_M5_params_NORM( char *fname)
+void read_M5_params_NORM(char *fname)
 {
 /* reads in the Enge coefficients and field parameters from the file denoted by
 "fname." It then returns two arrays, one for the field parameters (Bn_) and one
@@ -166,7 +166,7 @@ for the Enge coefficients (fcoef). */
 		fgets(line,512,fp);
 	sscanf(line," %lf\n", &R0);
 	fgets(line,512,fp);
-	sscanf(line," %lf\n", &LEFF);
+	sscanf(line," %lg\n", &LEFF);
 	sprintf(line,"#"); while(strncmp(line,"#",1)==0) fgets(line,512,fp);
 	int i=2;
 	pch = strtok(line, sep); sscanf(pch,"%lf", &Bn[i]);
@@ -192,16 +192,27 @@ for the Enge coefficients (fcoef). */
 		}
 		fgets(line,512,fp);
 	}
+	/*
+	pch = strtok(line, sep);
+	sscanf(pch,"%i", &n);
+    pch = strtok(NULL, sep);
+    sscanf(pch,"%i", &ee);
+    for( c=0; c<NC; c++)
+    { 
+    	index = c + NC*( NEE*n + ee );
+    	pch = strtok(NULL, sep); sscanf(pch,"%lf", &fcoef[index]);
+    }
+    */
 	return;
 }
 
-void write_M5_params_NORM(double * bfield, double * parameters)
+void write_M5_params_NORM(double * bfield, double * parameters, char * file_name)
 {
 /* writes the final fitted coefficients and bfield values to a file named
 "M5_sim_fit.txt." The parameters are written to copy the format of the file from
 which the initial parameters are read. */
     ofstream file;
-    file.open("M5_sim_fit.txt");
+    file.open(file_name);
     file << "#Field excitation parameters for each multipole n \r\n";
     file << "# row1: reference radius r0 [m] \r\n";
     file << "# row2: LEFF[m] \r\n";
@@ -226,7 +237,7 @@ which the initial parameters are read. */
         for (int k = NC; k < NC*2; ++k)
             file << parameters[NEE*i*NC + k] << " ";
         file << "\r\n";
-    }       
+    }
     file.close();
     return;
 }
@@ -239,7 +250,7 @@ to be read in by the COSY code. The field simulation is done, and the final
 field result is read into "data." */
 	char FS_fname[50]="TMP_COSY_out.txt" ;
 	double xx, yy, zz, Bxx, Byy, Bzz, Brr, Btt, tt;
-	data0=  (FldData*) malloc( Nt*Nz*sizeof(FldData) );
+	FldData * data0=  (FldData*) malloc( Nt*Nz*sizeof(FldData) );
 	double zz, rr=r_probes, tt;
 	for( k=0; k<Nz; k++ )
 	{
@@ -261,7 +272,7 @@ field result is read into "data." */
 		FILE *fpC;
 		fpC = fopen("TMP_Enge_params_for_COSY.txt", "w");
 		fprintf(fpC, " %d\n", OrdCOSY);
-		fprintf(fpC, " %lf\n", LEFF);
+		fprintf(fpC, " %lg\n", LEFF);
 		fprintf(fpC, " %lf\n", R0);
 		for( n=1 ; n<Nn; n++ )
 		{
@@ -332,6 +343,69 @@ field result is read into "data." */
 	fclose( fpCO );
 	return data0;
 } 
+
+FldData * File_Read_zScan_FldData(char *fname)
+{
+	FldData * data=  (FldData*) malloc( Nt*Nz*sizeof(FldData) );
+	const int LLEN = 512;
+	printf("   File_Read_zScan_FldData: %s\n", fname);
+	char format_flag[] = "DATA_Z_TH_BR_FldData";
+	FILE *fin;
+	char buffer1[LLEN];
+	fin = fopen(fname,"r");
+	if (fin==NULL)
+	{
+		printf("no file, %s. Aborting.\n", fname);
+		exit(-1);
+	}
+	
+	sprintf(buffer1,"#");
+	while(strncmp(buffer1,"#",1)==0)
+	{	
+		fgets(buffer1,LLEN,fin);
+		printf(buffer1);
+	}
+	sscanf(buffer1," %lf \n", &r_probes );
+	fgets(buffer1,LLEN,fin);
+	sscanf(buffer1," %lf \n", &th_step );
+	th_step *= DEGRAD;
+	fgets(buffer1,LLEN,fin);
+	sscanf(buffer1," %lf \n", &z_step );
+	fgets(buffer1,LLEN,fin);
+	sscanf(buffer1," %i \n", &Nz );
+	fgets(buffer1,LLEN,fin);
+	sscanf(buffer1," %i \n", &Nt );
+	
+	fgets(buffer1,LLEN,fin); printf(buffer1);
+	if( strncmp(buffer1,format_flag,strlen(format_flag) )!=0 )
+	{
+		printf(" Unexpected header: %s\n Continue?(y/n)", buffer1);
+		cin >> buffer1; if( strncmp(buffer1,"y",1)!=0 ) exit(0);
+	}
+	int kk, ntest;
+	for( k=0; k<Nz; k++ )
+	{
+		fgets(buffer1,LLEN,fin); //cout<<buffer1;
+		sscanf(buffer1," %i \n", &kk );
+		for( j=0; j<Nt; j++ )
+		{
+			index = j + Nt*k ;
+			fgets(buffer1,LLEN,fin); //cout<<buffer1;
+			ntest = sscanf(buffer1," %lf %lf %lf\n", &data[index].z, &data[index].t, &data[index].Br );
+			data[index].t *= DEGRAD; //convert degrees to radians
+			if( ntest!=3 )
+			{
+				printf(" Read unexpected input: %s\n  Aborting.", buffer1);
+				exit(0);
+			}
+		}
+	}
+	fgets(buffer1,LLEN,fin); //cout<<buffer1;
+	if( strncmp(buffer1,"END",3)==0 )
+		printf(" ...END. Read normally.\n");
+	fclose(fin);
+	return data;
+}
 
 double get_chi_squared(FldData * exp_data, FldData * model_data)
 {
@@ -439,15 +513,15 @@ void graph_residual(FldData * model, FldData * fit)
 	return;
 }
 
-double field_residual_calculator()
+double field_residual_calculator(char * fname_model, char * fname_fit)
 {
 /* main function to analyze the error in the data through various methods. */
 	double * fcoef_model, * fcoef_fit;
 	double * Bn_model, * Bn_fit;
 	FldData * data0_model, * data0_fit;
 	double chi_squared = 0;
-	char * fname_model = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
-	char * fname_fit   = (char*) "M5_sim_fit.txt";
+	//char * fname_model = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
+	//char * fname_fit   = "M5_tmp_fit_file.txt"; // (char*) "M5_sim_fit.txt";
 	
 	read_M5_params_NORM(fname_model);
 	fcoef_model = fcoef;
@@ -462,7 +536,7 @@ double field_residual_calculator()
 	data0_fit = Field_Simulation_via_COSY_M5_FldData(fcoef_fit, Bn_fit);
 	
 	//graph_fld_data(data0_fit);
-	graph_residual(data0_model, data0_fit);
+	//graph_residual(data0_model, data0_fit);
 	
 	chi_squared = get_chi_squared(data0_model, data0_fit);
 	//double avg_percent_error = get_average_percent_error(data0_model, data0_fit);
@@ -470,5 +544,29 @@ double field_residual_calculator()
 	//printf("#chi^2 = %lg\r\n", chi_squared);
 	//printf("#<Percent Error> = %lg\r\n", avg_percent_error);
 	//printf("#<Difference> = %lg\r\n", avg_difference);
+	return chi_squared;
+}
+
+double field_residual_calculator_from_COSY_field(char * fname_model, char * fname_fit)
+{
+/* main function to analyze the error in the data through various methods. Uses
+pre-simulated field data. When analyzing experimental field data, this is the
+function you'll want to use. Simply input the name of the file holding the field
+data. Currently it is "COSY_0_0.txt." */
+	double * fcoef_model, * fcoef_fit;
+	double * Bn_model, * Bn_fit;
+	FldData * data0_model, * data0_fit;
+	double chi_squared = 0;
+
+	char str[512];
+	sprintf(str, "COSY_0_0.txt");
+	data0_model = File_Read_zScan_FldData(str);
+	
+	read_M5_params_NORM(fname_fit);
+	fcoef_fit = fcoef;
+	Bn_fit    = Bn;
+	data0_fit = Field_Simulation_via_COSY_M5_FldData(fcoef_fit, Bn_fit);
+	
+	chi_squared = get_chi_squared(data0_model, data0_fit);
 	return chi_squared;
 }

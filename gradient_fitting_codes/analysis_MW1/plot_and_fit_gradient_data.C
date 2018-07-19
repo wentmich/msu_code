@@ -181,25 +181,25 @@ which the initial parameters are read. */
     file << "# row1: reference radius r0 [m] \r\n";
     file << "# row2: LEFF[m] \r\n";
     file << "# row3: Field excitation on multipole \r\n";
-    file << '\t' << R0 << "\r\n";
-    file << '\t' << LEFF;
+    file << "   " << R0 << "\r\n";
+    file << "   " << LEFF;
     file << "\r\n#Fields at r0 for each multipole component \r\n";
-    file << "#n= \t 2 \t 3 \t 4 \t 5 \t 6 \t 7 \t 8 \t 9 \t 10 \r\n";
+    file << "#n=  2        3     4     5     6     7     8     9     10\r\n";
     for (int i = 2; i < Nn; ++i)
-        file << '\t' << bfield[i];
+        file << "     " << bfield[i];
     file << "\r\n";
     file << "# Enge coefs \r\n";
-    file << "# n\tee\tc0\tc1\tc2\tc3\tc4\tc5\tc6\tc7\tc8\tc9\tc10\tc11\r\n";
+    file << "# n  ee  c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11\r\n";
     for (int i = 0; i < Nn; ++i)
     {
-        file << i << '\t' << "0" << '\t';
+        file << "  " << i << "  0  ";
         for (int k = 0; k < NC; ++k)
-            file << parameters[NEE*i*NC + k] << '\t';
+            file << parameters[NEE*i*NC + k] << " ";
         file << "\r\n";
         
-        file << i << '\t' << "1" << '\t';
+        file << "  " << i << "  1  ";
         for (int k = NC; k < NC*2; ++k)
-            file << parameters[NEE*i*NC + k] << '\t';
+            file << parameters[NEE*i*NC + k] << " ";
         file << "\r\n";
     }       
     file.close();
@@ -249,7 +249,7 @@ the "Bn_" argument. */
     sprintf(line,"#"); while(strncmp(line,"#",1)==0) fgets(line,512,fp);
     sscanf(line," %lf\n", &R0);
     fgets(line,512,fp);
-    sscanf(line," %lf\n", &LEFF);
+    sscanf(line," %lg\n", &LEFF);
     sprintf(line,"#"); while(strncmp(line,"#",1)==0) fgets(line,512,fp);
     i=2;
     pch = strtok(line, sep);

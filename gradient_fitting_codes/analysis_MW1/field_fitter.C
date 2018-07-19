@@ -1,3 +1,12 @@
+/* This program executes a full field fit on the magnetic field data of an SQ
+using MINUIT and the minimizer MIGRAD. The program minimizes the sum of the
+squared residuals as calculated by the functions in the header file 
+"field_residual_calculator.h." The initial parameters are read in from the file
+"fname_init." Intermediate and final parameters are read into the file
+"fname_tmp." The field is fitted to the field described by the data in 
+"field_file." The COSY code only uses n = {2,...,6}, so all other parameters are
+held fixed in the fit. */
+
 # include <stdlib.h>
 # include <stdio.h>
 # include <math.h>
@@ -12,6 +21,7 @@
 # include "Math/Minimizer.h"
 # include "Math/Factory.h"
 # include "Math/Functor.h"
+# include "field_residual_calculator.h"
 
 /* DECLARATION OF GLOBAL VARIBALES:
     sep     = delimiters used by "strtok" funciton
@@ -68,15 +78,18 @@ int index;
 int OrdCOSY = 6;
 double r_probes = 0.1873;
 int NPOLES = 11;
+int nParams = NP*NPOLES;
 int i, j, k, c, ee, n, m, index;
 
 char * fname_model = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
-char * fname_fit   = (char*) "M5_sim_fit.txt";
-char * fname_init  = (char*) "M5_params_FSQ5_9.4Tpm_TEST.txt";
+char * fname_init  = (char*) "M5_init_pars.txt";
+char * fname_tmp   = (char*) "M5_tmp_fit_file.txt";
+char * field_file  = (char*) "COSY_0_0.txt";
 
 double * fcoef = (double*) malloc( NC*NEE*NNC * sizeof(double) );
 double * Bn    = (double*) malloc( Nn * sizeof(double) );
-
+double * Bn_tmp = (double*) malloc(sizeof(double)*NPOLES);
+double * fcoef_tmp = (double*) malloc( NC*NEE*NNC * sizeof(double) );
 /* DECLARATION OF DATA STRUCTURES:
 	FldData = structure used to store arrays of field data   */
 
@@ -90,21 +103,35 @@ typedef struct
 
 /* DECLARATION OF FUNCTIONS:   */
 
-double target_function(double * parameters)
+double target_function(double * pars)
 {
-	gROOT -> ProcessLine(".L field_residual_calculator.C");
-	double * Bn_tmp = (double*) malloc(sizeof(double)*NPOLES);
-	double * fcoef_tmp = (double*) malloc( NC*NEE*NNC * sizeof(double) );
+	TStopwatch timer;
+	timer.Start();
+	// parameters are read in correctly. They are the initialized variables
 	for (int i = 0; i < NPOLES; ++i)
 	{
-		Bn_tmp[i] = parameters[i*NP];
-		for (int j = 0; j < NC; ++j)
-			fcoef_tmp[j*i] = parameters[i*NP + j + 1];
+		Bn_tmp[i] = pars[i*NP];
+		for (int j = 0; j < NC/2; ++j)
+			fcoef_tmp[i*NC*NEE + j] = pars[i*NP + j +1];
+		for (int k = NC/2; k < NC; ++k)
+			fcoef_tmp[i*NC*NEE + k] = 0;
+		for (int m = 0; m < NC/2; ++m)
+			fcoef_tmp[i*NC*NEE + m + NC] = pars[i*NP + m + NC/2 +1];
+		for (int n = NC/2; n < NC; ++n)
+			fcoef_tmp[i*NC*NEE + n + NC] = 0;
 	}
-	write_M5_params_NORM(Bn_tmp, fcoef_tmp);
-	double chi_squared = field_residual_calculator();
-	printf("chi^2 = %lg", chi_squared);
-	return chi_squared;
+	
+	write_M5_params_NORM(Bn_tmp, fcoef_tmp, fname_tmp);
+	// function definitely works up to here.
+	// system("vi M5_tmp_fit_file.txt");
+	double chi = field_residual_calculator_from_COSY_field(field_file, fname_tmp);
+	printf("chi^2 = %lg\n", chi);
+	//gSystem -> Unload("field_residual_calculator.C");
+	//field_residual_calculator();
+	double clock = timer.RealTime();
+	cout << "Time for iteration: " << clock << endl;
+	timer.Reset();
+	return chi;
 }
 
 string to_string(int number)
@@ -115,68 +142,15 @@ string to_string(int number)
 	return str;
 }
 
-void read_M5_params_NORM( char *fname)
-{
-/* reads in the Enge coefficients and field parameters from the file denoted by
-"fname." It then returns two arrays, one for the field parameters (Bn_) and one
-for the Enge coefficients (fcoef). */
-	FILE *fp; char line[512]; char *pch;
-	const char sep[2]=" ,";
-	fp = fopen(fname, "r");
-	sprintf(line,"#");
-	while(strncmp(line,"#",1)==0)
-		fgets(line,512,fp);
-	sscanf(line," %lf\n", &R0);
-	fgets(line,512,fp);
-	sscanf(line," %lf\n", &LEFF);
-	sprintf(line,"#"); while(strncmp(line,"#",1)==0) fgets(line,512,fp);
-	int i=2;
-	pch = strtok(line, sep); sscanf(pch,"%lf", &Bn[i]);
-	for( i=3; i<7 ; i++ )
-	{
-		pch = strtok(NULL, sep);
-		sscanf(pch,"%lf", &Bn[i]);
-	} 
-	sprintf(line,"#");
-	while(strncmp(line,"#",1)==0)
-		fgets(line,512,fp);
-	while( !feof(fp) )
-	{
-		pch = strtok(line, sep);
-		sscanf(pch,"%i", &n);
-		pch = strtok(NULL, sep);
-		sscanf(pch,"%i", &ee);
-		for(int c=0; c<NC; c++)
-		{
-			index = c + NC*( NEE*n + ee );
-			pch = strtok(NULL, sep);
-			sscanf(pch,"%lf", &fcoef[index]);
-		}
-		fgets(line,512,fp);
-	}
-	pch = strtok(line, sep);
-	sscanf(pch,"%i", &n);
-    pch = strtok(NULL, sep);
-    sscanf(pch,"%i", &ee);
-    for( c=0; c<NC; c++)
-    { 
-    	index = c + NC*( NEE*n + ee );
-    	pch = strtok(NULL, sep); sscanf(pch,"%lf", &fcoef[index]);
-    }
-	return;
-}
-
 int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migrad")
 {	
 	ROOT::Math::Minimizer * min = 
 	ROOT::Math::Factory::CreateMinimizer(min_name, fnc_name);
 	
 	min -> SetMaxFunctionCalls(100000000);
-	min -> SetMaxIterations(3);
-	min -> SetTolerance(0.1);
+	min -> SetMaxIterations(10000);
+	min -> SetTolerance(0.001);
 	min -> SetPrintLevel(1);
-	
-	int nParams = NP*NPOLES;
 	
 	ROOT::Math::Functor func(&target_function, nParams);
 	min -> SetFunction(func);
@@ -186,6 +160,7 @@ int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migr
 	double * minimum   = (double*) malloc(sizeof(double)*nParams);
 	double * maximum   = (double*) malloc(sizeof(double)*nParams);
 	
+	//read in initial parameters into the fcoef and Bn array
 	read_M5_params_NORM(fname_init);
 
 	for (int i = 0; i < NPOLES; ++i)
@@ -199,17 +174,23 @@ int field_fitter(const char * min_name = "Minuit", const char * fnc_name = "Migr
 
 	for (int i = 0; i < NP*NPOLES; ++i)
 	{
-		step[i] = 0.00001;
-		minimum[i]  = -1.0e3;
-		maximum[i]  =  1.0e3;
+		step[i] = 0.01;
+		minimum[i]  = -1.0e2;
+		maximum[i]  =  1.0e2;
 	}
 
-	for (int i = 0; i < NP*NPOLES; ++i)
+	for (int i = 0; i < (NP*2); ++i)
+		min -> SetFixedVariable(i, to_string(i), variables[i]);
+	for (int i = (NP*2); i < (NP*7); ++i)
 		min -> SetLimitedVariable(i, to_string(i), variables[i], step[i], minimum[i], maximum[i]);
+	for (int i = (NP*7); i < (NP*11); ++i)
+		min -> SetFixedVariable(i, to_string(i), variables[i]);
 	
+	
+	//program good until here at least...
 	min -> Minimize();
-	fit_min_value = min -> MinValue();
+	double fit_min_value = min -> MinValue();
 	
-	cout << "Minimization Achieved. Minimum Value: " << fit_min_value << endl;
+	cout << "Minimization Achieved. Minimum Chi^2: " << fit_min_value << endl;
 	return 0; 
 }
