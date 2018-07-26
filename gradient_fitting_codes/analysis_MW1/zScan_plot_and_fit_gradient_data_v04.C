@@ -77,16 +77,16 @@ struct data
 
 void initialize_Nz()
 {
-	FILE * file;
-	file = fopen("b_n00_m0.txt", "r");
+    FILE * file;
+    file = fopen("b_n00_m0.txt", "r");
     const int Nline = 100;
     char line[Nline];
     fgets(line,Nline,file);
     int n = 0;
     while(!feof(file))
     {
-    	fgets(line, Nline, file);
-    	n += 1;
+        fgets(line, Nline, file);
+        n += 1;
     }
     Nz = n - 1;
     return;
@@ -197,15 +197,15 @@ fixing the fourth and fifth order parameters to zero. */
     func -> SetParameter(NP-1, bfield[pole]);
     if (fit)
     {
-		graph -> Fit("func");
-		for (int i = 0; i < (NP - 1)/2; ++i)
-			coefficients[(NC*NEE*pole) + i] = func -> GetParameter(i);
-		for (int i = 0; i < (NP - 1)/2; ++i)
-			coefficients[(NC*NEE*pole) + NC + i] = func -> GetParameter(i+(NP-1)/2);
-		bfield[pole] = func -> GetParameter(NP-1);
-	}
-	graph -> SetName("Experimental Data");
-	func -> SetName("Fitted Enge Product Model");
+        graph -> Fit("func");
+        for (int i = 0; i < (NP - 1)/2; ++i)
+            coefficients[(NC*NEE*pole) + i] = func -> GetParameter(i);
+        for (int i = 0; i < (NP - 1)/2; ++i)
+            coefficients[(NC*NEE*pole) + NC + i] = func -> GetParameter(i+(NP-1)/2);
+        bfield[pole] = func -> GetParameter(NP-1);
+    }
+    graph -> SetName("Experimental Data");
+    func -> SetName("Fitted Enge Product Model");
     graph -> Draw();
     func -> SetTitle("On-Axis Gradient Function;z_{position};b_{n,m}(z)");
     func -> Draw("same");
@@ -316,12 +316,12 @@ the "Bn_" argument. */
     }
     if (strncmp(line, "\0", 2) == 0)
     {
-		pch = strtok(line, sep); sscanf(pch,"%i", &n);
-		pch = strtok(NULL, sep); sscanf(pch,"%i", &ee);
-		for( c=0; c<NC; c++){
-		  index = c + NC*( NEE*n + ee );
-		  pch = strtok(NULL, sep); sscanf(pch,"%lf", &fcoef[index]);
-		}
+        pch = strtok(line, sep); sscanf(pch,"%i", &n);
+        pch = strtok(NULL, sep); sscanf(pch,"%i", &ee);
+        for( c=0; c<NC; c++){
+          index = c + NC*( NEE*n + ee );
+          pch = strtok(NULL, sep); sscanf(pch,"%lf", &fcoef[index]);
+        }
     }
     return;
 }
@@ -335,8 +335,8 @@ initial parameters should be read. It then reads the paramters, creates graphs
 for each of the multipole components, and fits Enge product models to them. A 
 flag can be set to plot the function with initial parameters instead of fitted
 parameters. */
-	initialize_Nz();
-	cout << Nz << endl;
+    initialize_Nz();
+    cout << Nz << endl;
     char f_dir[512]="/projects/fribmappers_data/analysis_MW1/";
     char f_params[128] = "M5_params_FSQ5_9.4Tpm_TEST.txt";
     char file_pars[640];
@@ -363,37 +363,37 @@ parameters. */
         printf(" pole = %i,  LEFF = %lf\n", pole, LEFF);
     }
 //exit(0);
-	int q, s, o;
-	cout << "Enter integer quadrupole current for analysis: ";
-	cin >> q;
-	cout << "Enter integer sextupole current for analysis: ";
-	cin >> s;
-	cout << "Enter integer octupole current for analysis: ";
-	cin >> o;
-	
-	char * saved_file = make_saved_file_name(q, s, o);
-	cout << saved_file << endl;
+    int q, s, o;
+    cout << "Enter integer quadrupole current for analysis: ";
+    cin >> q;
+    cout << "Enter integer sextupole current for analysis: ";
+    cin >> s;
+    cout << "Enter integer octupole current for analysis: ";
+    cin >> o;
+    
+    char * saved_file = make_saved_file_name(q, s, o);
+    cout << saved_file << endl;
     write_M5_params_NORM_with_n_1(Bn, fcoef, saved_file);
     
     // ---------------- Second Fit Iteration ------------------
-	bool iterate_fit = 0; // flag: if 0, perform an iterative fit
+    bool iterate_fit = 0; // flag: if 0, perform an iterative fit
     if (iterate_fit == 0)
-	{
-		for (int i = 1; i < 10; ++i)
-		{
-			read_M5_params_NORM_with_n_1(saved_file, Bn);
-			// Loop through all gradients and fit field (e.g. Enge) parameters on each
-			bool fit = 1;
-			// fitting flag. if true, complete fits. if false, only plot the initial parameters
-			for (int pole = 1; pole < 11; ++pole)
-			{
-				read_data = read_gradient_data(make_file_name(pole));
-				TGraph * graph = graph_data(read_data);
-				fit_graph(graph, fcoef, Bn, pole, fit);
-				printf(" pole = %i,  LEFF = %lf\n", pole, LEFF);
-			}
-			write_M5_params_NORM_with_n_1(Bn, fcoef, saved_file);
-		}
-	}
+    {
+        for (int i = 1; i < 10; ++i)
+        {
+            read_M5_params_NORM_with_n_1(saved_file, Bn);
+            // Loop through all gradients and fit field (e.g. Enge) parameters on each
+            bool fit = 1;
+            // fitting flag. if true, complete fits. if false, only plot the initial parameters
+            for (int pole = 1; pole < 11; ++pole)
+            {
+                read_data = read_gradient_data(make_file_name(pole));
+                TGraph * graph = graph_data(read_data);
+                fit_graph(graph, fcoef, Bn, pole, fit);
+                printf(" pole = %i,  LEFF = %lf\n", pole, LEFF);
+            }
+            write_M5_params_NORM_with_n_1(Bn, fcoef, saved_file);
+        }
+    }
     return 0;
 }
